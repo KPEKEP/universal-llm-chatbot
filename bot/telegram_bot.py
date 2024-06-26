@@ -4,8 +4,8 @@ import traceback
 import tempfile
 import os
 import functools
-from datetime import datetime, timedelta
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from datetime import datetime
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, helpers
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -13,7 +13,6 @@ from telegram.ext import (
     CallbackQueryHandler,
     filters,
     ContextTypes,
-    JobQueue,
 )
 from database.user_data_db import UserDataDB
 from models.user_data import UserData
@@ -74,7 +73,7 @@ def user_data_required(func):
         user_id = update.effective_user.id
         user_data = await self.user_db.get_user_data(user_id)
         if not user_data:
-            await self.user_db.create_user(user_id)
+            await self.user_db.create_user(user_id, update.effective_user.username)
         return await func(self, update, context, *args, **kwargs)
     return wrapper
 
@@ -93,7 +92,14 @@ class TelegramBot:
         self.config = config
         self.localization = localization
 
-        self.application = Application.builder().token(config["telegram"]["token"]).build()
+        self.application = (
+            Application.builder()
+            .token(config["telegram"]["token"])
+            .read_timeout(float(config["telegram"]["read_timeout"]))
+            .write_timeout(float(config["telegram"]["write_timeout"]))
+            .build()
+        )
+
         self.user_db = UserDataDB(config, config["user_data_db"]["name"])
         self.provider = get_provider(config)
         self.global_limiter = AsyncLimiter(
@@ -141,8 +147,9 @@ class TelegramBot:
         self.application.add_handler(CommandHandler("history", self.export_history))
         self.application.add_handler(CommandHandler("whitelist", self.admin_whitelist))
         self.application.add_handler(CommandHandler("blacklist", self.admin_blacklist))
-        self.application.add_handler(CommandHandler("broadcast", self.admin_broadcast))
         self.application.add_handler(CommandHandler("grant_admin", self.admin_set_admin))
+        self.application.add_handler(CommandHandler("broadcast", self.admin_broadcast))
+        self.application.add_handler(CommandHandler("getid", self.admin_get_id))
         self.application.add_handler(CallbackQueryHandler(self.button))
         self.application.add_handler(
             MessageHandler(filters.TEXT | filters.VOICE & ~filters.COMMAND, self.handle_message)
@@ -153,9 +160,10 @@ class TelegramBot:
     @rate_limit
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle the /start command."""
-        user_id = update.effective_user.id
-        user_data = await self.user_db.get_user_data(user_id)
+        user_id = update.effective_user.id        
         await update.message.reply_text(await self.loc("WELCOME", user_id))
+        user_id_msg = (await self.loc("YOUR_ID", user_id)).format(value=user_id)
+        await update.message.reply_text(user_id_msg, parse_mode="Markdown")
 
     
     @user_access_required
@@ -181,9 +189,6 @@ class TelegramBot:
         """Handle the /settings command to display and modify bot settings."""
         user_id = update.effective_user.id
         user_data = await self.user_db.get_user_data(user_id)
-        if not user_data:
-            await self.user_db.create_user(user_id)
-            user_data = await self.user_db.get_user_data(user_id)
 
         current_settings = (
             f"Current settings:\n"
@@ -652,72 +657,95 @@ class TelegramBot:
     async def admin_whitelist(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
         Whitelist a user. Only admins can use this command.
-        Usage: /whitelist <user_id>
+        Usage: /whitelist <user_id or username>
         """
         user_id = update.effective_user.id
         
-        target_user_id = int(context.args[0])
+        if not context.args:
+            await update.message.reply_text(await self.loc("WHITELIST_USAGE", user_id))
+            return
+
+        target_user = context.args[0]
         mode = True
         if len(context.args) > 1:
             mode_arg = str(context.args[1]).lower()
             mode_off = (mode_arg == "false") or (mode_arg == "0") or (mode_arg == "off") or (mode_arg == "no")            
-            mode = not mode_off        
-        await self.user_db.set_whitelist(target_user_id, mode)
-        await update.message.reply_text((await self.loc("USER_WHITELISTED", user_id)).format(user_id=target_user_id, mode=mode))
+            mode = not mode_off
+
+        target_user_data = await self.get_user_data_by_id_or_username(target_user)
+        if not target_user_data:
+            await update.message.reply_text(await self.loc("USER_NOT_FOUND", user_id))
+            return
+
+        await self.user_db.set_whitelist(target_user_data.user_id, mode)
+        await update.message.reply_text((await self.loc("USER_WHITELISTED", user_id)).format(user_id=target_user, mode=mode))
 
     @admin_required
     @user_data_required
     async def admin_blacklist(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
         Blacklist a user. Only admins can use this command.
-        Usage: /blacklist <user_id>
+        Usage: /blacklist <user_id or username>
         """
         user_id = update.effective_user.id
         
-        target_user_id = int(context.args[0])
-        mode = True
-        if len(context.args) > 1:
-            mode_arg = str(context.args[1]).lower()
-            mode_off = (mode_arg == "false") or (mode_arg == "0") or (mode_arg == "off") or (mode_arg == "no")            
-            mode = not mode_off
-        await self.user_db.set_blacklist(target_user_id, mode)
-        await update.message.reply_text((await self.loc("USER_BLACKLISTED", user_id)).format(user_id=target_user_id, mode=mode))
+        if not context.args:
+            await update.message.reply_text(await self.loc("BLACKLIST_USAGE", user_id))
+            return
 
-    @admin_required
-    @user_data_required
-    async def admin_blacklist(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """
-        Blacklist a user. Only admins can use this command.
-        Usage: /blacklist <user_id>
-        """
-        user_id = update.effective_user.id
-        
-        target_user_id = int(context.args[0])
+        target_user = context.args[0]
         mode = True
         if len(context.args) > 1:
             mode_arg = str(context.args[1]).lower()
             mode_off = (mode_arg == "false") or (mode_arg == "0") or (mode_arg == "off") or (mode_arg == "no")            
             mode = not mode_off
-        await self.user_db.set_blacklist(target_user_id, mode)
-        await update.message.reply_text((await self.loc("USER_BLACKLISTED", user_id)).format(user_id=target_user_id, mode=mode))
+
+        target_user_data = await self.get_user_data_by_id_or_username(target_user)
+        if not target_user_data:
+            await update.message.reply_text(await self.loc("USER_NOT_FOUND", user_id))
+            return
+
+        await self.user_db.set_blacklist(target_user_data.user_id, mode)
+        await update.message.reply_text((await self.loc("USER_BLACKLISTED", user_id)).format(user_id=target_user, mode=mode))
 
     @admin_required
     @user_data_required
     async def admin_set_admin(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
-        Promotes\demotes user from being admin. Only admins can use this command.
-        Usage: /grant_admin <user_id>
+        Promotes/demotes user from being admin. Only admins can use this command.
+        Usage: /grant_admin <user_id or username>
         """
         user_id = update.effective_user.id
         
-        target_user_id = int(context.args[0])
+        if not context.args:
+            await update.message.reply_text(await self.loc("GRANT_ADMIN_USAGE", user_id))
+            return
+
+        target_user = context.args[0]
         mode = True
         if len(context.args) > 1:
             mode_arg = str(context.args[1]).lower()
             mode_off = (mode_arg == "false") or (mode_arg == "0") or (mode_arg == "off") or (mode_arg == "no")            
             mode = not mode_off
-        await self.user_db.set_admin(target_user_id, mode)
-        await update.message.reply_text((await self.loc("USER_ADMINED", user_id)).format(user_id=target_user_id, mode=mode))
+
+        target_user_data = await self.get_user_data_by_id_or_username(target_user)
+        if not target_user_data:
+            await update.message.reply_text(await self.loc("USER_NOT_FOUND", user_id))
+            return
+
+        await self.user_db.set_admin(target_user_data.user_id, mode)
+        await update.message.reply_text((await self.loc("USER_ADMINED", user_id)).format(user_id=target_user, mode=mode))
+
+    async def get_user_data_by_id_or_username(self, user_identifier: str):
+        """
+        Get user data by user ID or username.
+        :param user_identifier: User ID or username
+        :return: UserData object or None if not found
+        """
+        if user_identifier.isdigit():
+            return await self.user_db.get_user_data(int(user_identifier))
+        else:
+            return await self.user_db.get_user_by_username(user_identifier.lstrip('@'))
 
     @admin_required
     @user_data_required
@@ -738,6 +766,29 @@ class TelegramBot:
         
         await update.message.reply_text(await self.loc("BROADCAST_SENT", user_id))
 
+    @admin_required
+    @user_data_required
+    async def admin_get_id(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Get user ID by username. Only admins can use this command.
+        Usage: /getid <username>
+        """
+        user_id = update.effective_user.id
+        
+        if not context.args:
+            await update.message.reply_text(await self.loc("GETID_USAGE", user_id))
+            return
+
+        username = context.args[0].lstrip('@')
+        user_data = await self.user_db.get_user_by_username(username)
+
+        if user_data:
+            response = await self.loc("GETID_RESULT", user_id)
+            await update.message.reply_text(response.format(username=username, user_id=user_data.user_id))
+        else:
+            response = await self.loc("GETID_NOT_FOUND", user_id)
+            await update.message.reply_text(response.format(username=username))
+
     async def is_admin(self, user_id: int) -> bool:
         """
         Check if a user is an admin.
@@ -755,6 +806,9 @@ class TelegramBot:
         :param user_id: The user ID to check
         :return: True if the user has access, False otherwise
         """
+        if user_id in self.admin_users:
+            return True
+        
         user_data = await self.user_db.get_user_data(user_id)
         if not user_data:
             return False
@@ -790,6 +844,7 @@ class TelegramBot:
                     os.unlink(temp_file_name)
         
         if update.effective_message:
+            traceback.print_exc()
             await update.effective_message.reply_text(await self.loc("ERROR_SORRY", user_id))
 
     def run(self):

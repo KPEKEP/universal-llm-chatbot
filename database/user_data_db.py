@@ -45,6 +45,7 @@ class UserDataDB:
         await db.execute(f'''
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
+            user_name TEXT,
             message_history TEXT,
             model TEXT DEFAULT '{self.provider_config["models"]["default"]}',
             system_prompt TEXT DEFAULT '{self.provider_config["models"]["system_prompt"]}',
@@ -81,18 +82,19 @@ class UserDataDB:
         if user_data:
             user_data_obj = UserData(
                 user_id=user_data[0],
-                message_history=json.loads(user_data[1]),
-                model=user_data[2],
-                system_prompt=user_data[3],
-                temperature=user_data[4],
-                top_p=user_data[5],
-                max_tokens=user_data[6],
-                language=user_data[7],
-                speaker=user_data[8],
-                is_admin=user_data[9],
-                is_whitelisted=user_data[10],
-                is_blacklisted=user_data[11],
-                last_request=datetime.fromisoformat(user_data[12]) if user_data[12] else None
+                user_name=user_data[1],
+                message_history=json.loads(user_data[2]),
+                model=user_data[3],
+                system_prompt=user_data[4],
+                temperature=user_data[5],
+                top_p=user_data[6],
+                max_tokens=user_data[7],
+                language=user_data[8],
+                speaker=user_data[9],
+                is_admin=user_data[10],
+                is_whitelisted=user_data[11],
+                is_blacklisted=user_data[12],
+                last_request=datetime.fromisoformat(user_data[13]) if user_data[13] else None
             )
             self.cache[user_id] = user_data_obj
             return user_data_obj
@@ -113,18 +115,18 @@ class UserDataDB:
         columns = ', '.join(data.keys())
         placeholders = ':' + ', :'.join(data.keys())
         query = f'INSERT OR REPLACE INTO users ({columns}) VALUES ({placeholders})'
-        await db.execute(query, data)
+        await db.execute(query, data), 
         await db.commit()
         self.cache[user_data.user_id] = user_data
 
-    async def create_user(self, user_id: int):
+    async def create_user(self, user_id: int, user_name: str):
         """
         Create a new user in the database.
 
         Args:
             user_id (int): The ID of the new user.
         """
-        user_data = UserData(user_id=user_id)
+        user_data = UserData(user_id=user_id, user_name=user_name)
         await self.update_user_data(user_data)
 
     async def set_admin(self, user_id: int, is_admin: bool):
@@ -187,3 +189,20 @@ class UserDataDB:
         db = await self.connect()
         async with db.execute('SELECT user_id FROM users WHERE is_admin = 1') as cursor:
             return [row[0] for row in await cursor.fetchall()]
+
+    async def get_user_by_username(self, username: str):
+        """
+        Retrieve user data by username.
+
+        Args:
+            username (str): The username to search for.
+
+        Returns:
+            UserData: The user data object if found, None otherwise.
+        """
+        db = await self.connect()
+        async with db.execute('SELECT * FROM users WHERE user_name = ?', (username,)) as cursor:
+            user_data = await cursor.fetchone()
+        if user_data:
+            return UserData(*user_data)
+        return None

@@ -12,6 +12,7 @@ class UserData:
     Represents user data and preferences for AI interactions.
     """
     user_id: int
+    user_name: str = None
     message_history: List[Dict[str, str]] = field(default_factory=list)
     model: str = provider_config["models"]["default"]
     system_prompt: str = provider_config["models"]["system_prompt"]
