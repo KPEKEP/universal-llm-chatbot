@@ -1,0 +1,12 @@
+python-telegram-bot
+aiosqlite
+ollama
+whisper
+torch
+torchaudio
+TTS
+transitions
+cachetools
+aiolimiter
+pyyaml
+langdetect

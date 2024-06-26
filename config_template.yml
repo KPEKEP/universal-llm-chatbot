@@ -1,0 +1,74 @@
+telegram:
+  # The Telegram Bot API token, obtained from BotFather
+  token: "<ENTER YOUR TELEGRAM BOT TOKEN>"
+  # List of user IDs with administrative privileges
+  admin_users:
+    - 012345678 # Your telegram id
+  # Determines who can access the bot: "public" for everyone, "whitelist" for specific users
+  access_mode: "whitelist" # Can be "public" or "whitelist"
+
+user_data_db:
+  # Name of the SQLite database file to store user data
+  name: user_data.db
+  # Maximum number of user data entries to keep in memory cache
+  max_cache_size: 1000
+  # Time-to-live (in seconds) for cached user data entries
+  max_ttl: 300
+
+# The AI provider class to use for generating responses
+provider: basic.BasicProvider 
+
+providers:
+  basic.BasicProvider:
+    ollama:
+      # URL of the Ollama server for AI model inference
+      host: http://localhost:11434
+
+    models:
+      # Default system prompt for the AI model
+      system_prompt: 'You are a helpful, harmless, and honest AI assistant. Provide accurate info, respect safety, admit uncertainty, encourage critical thinking, and adapt to users. Avoid harm, be respectful, and prioritize well-being. Be concise yet thorough. Respond in the same language as the user.'
+      # Controls randomness in AI responses (0.0 to 1.0)
+      temperature: 0.2
+      # Controls diversity of AI responses (0.0 to 1.0)
+      top_p: 0.95
+      # Maximum number of tokens in AI responses
+      max_tokens: 2048
+      # Default AI model to use
+      default: "aya:latest"
+      # List of available AI models
+      available:
+        - "llama3:8b"
+        - "aya:latest"
+        - "deepseek-coder-v2:16b-lite-instruct-q8_0"
+    voice:
+      # Whisper model size for voice transcription
+      whisper_model: "medium"
+    tts:
+      # Text-to-speech model path
+      model: tts_models/multilingual/multi-dataset/xtts_v2
+      # Whether to use GPU for text-to-speech generation
+      gpu: false
+      # Default speaker voice for text-to-speech
+      speaker: "Ana Florence"
+      # Speed of the speaker's voice (1-10)
+      speaker_speed: 5
+      # Whether to split long text into sentences for TTS
+      split_sentences: true     
+
+# Whether to include the system prompt in each message to the AI
+remind_system_prompt: true
+
+rate_limit:
+  # Maximum number of global requests allowed in the specified time frame
+  global_max_requests: 400
+  # Time frame for global rate limiting (in seconds)
+  global_time_frame_seconds: 60
+  # Maximum number of requests allowed per user in the specified time frame
+  user_max_requests: 4
+  # Time frame for user-specific rate limiting (in seconds)
+  user_time_frame_seconds: 10
+
+# Default language for the bot interface
+language: en
+# Maximum number of messages to keep in user's conversation history
+max_message_history_num: 10
