@@ -60,6 +60,52 @@ python main.py
 
 The bot will now be active and respond to messages on Telegram.
 
+## Available Commands
+
+### User Commands
+
+- `/start`: Initialize the bot and receive a welcome message.
+- `/settings`: Access and modify bot settings.
+- `/reset`: Reset your conversation history.
+- `/history`: Export your conversation history.
+
+### Admin Commands
+
+- `/whitelist <user_id or username> [on/off]`: Add or remove a user from the whitelist.
+- `/blacklist <user_id or username> [on/off]`: Add or remove a user from the blacklist.
+- `/grant_admin <user_id or username> [on/off]`: Grant or revoke admin privileges for a user.
+- `/broadcast <message>`: Send a message to all users.
+- `/getid <username>`: Get the user ID for a given username.
+
+### Command Usage Examples
+
+1. Whitelist a user:
+   ```
+   /whitelist @username on
+   ```
+
+2. Blacklist a user:
+   ```
+   /blacklist 123456789 on
+   ```
+
+3. Grant admin privileges:
+   ```
+   /grant_admin @username on
+   ```
+
+4. Send a broadcast message:
+   ```
+   /broadcast Hello, this is an important announcement!
+   ```
+
+5. Get a user's ID:
+   ```
+   /getid @username
+   ```
+
+Note: Admin commands are only available to users with administrative privileges as defined in the configuration file.
+
 ## Extending Beyond BasicProvider
 
 The Universal LLM ChatBot is designed to be extensible. To create a new provider:
