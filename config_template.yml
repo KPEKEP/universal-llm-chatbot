@@ -6,7 +6,11 @@ telegram:
     - 012345678 # Your telegram id
   # Determines who can access the bot: "public" for everyone, "whitelist" for specific users
   access_mode: "whitelist" # Can be "public" or "whitelist"
-
+  # Timeout for reading Telegram requests (in seconds)
+  read_timeout: 120
+  # Timeout for sending Telegram requests (in seconds)
+  write_timeout: 120
+  
 user_data_db:
   # Name of the SQLite database file to store user data
   name: user_data.db
