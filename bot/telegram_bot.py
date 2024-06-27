@@ -91,10 +91,13 @@ class TelegramBot:
         """
         self.config = config
         self.localization = localization
+        token = os.getenv('UNI_LLM_BOT_TOKEN')
+        if not token:
+            raise ValueError("UNI_LLM_BOT_TOKEN environment variable is not set")
 
         self.application = (
             Application.builder()
-            .token(config["telegram"]["token"])
+            .token(token)
             .read_timeout(float(config["telegram"]["read_timeout"]))
             .write_timeout(float(config["telegram"]["write_timeout"]))
             .build()
@@ -112,8 +115,14 @@ class TelegramBot:
         
         self.job_queue = self.application.job_queue
 
-        self.admin_users = set(config["telegram"]["admin_users"])
-        self.access_mode = config["telegram"]["access_mode"]
+       # Load admin users from environment variable
+        admin_users_str = os.getenv('UNI_LLM_ADMIN_USER_IDS', '')
+        self.admin_users = set(int(user_id.strip()) for user_id in admin_users_str.split(',') if user_id.strip())
+
+        # Load access mode from environment variable
+        self.access_mode = os.getenv('UNI_LLM_ACCESS_MODE', 'public')
+        if self.access_mode not in ['public', 'whitelist']:
+            raise ValueError("UNI_LLM_ACCESS_MODE must be either 'public' or 'whitelist'")
         
         self.setup_handlers()
 

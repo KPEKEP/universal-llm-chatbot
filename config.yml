@@ -11,7 +11,7 @@ telegram:
 
 user_data_db:
   # Name of the SQLite database file to store user data
-  name: "data/user_data.db" # For docker "app/data/user_data.db"
+  name: "app/data/user_data.db" # For docker "app/data/user_data.db"
   # Maximum number of user data entries to keep in memory cache
   max_cache_size: 1000
   # Time-to-live (in seconds) for cached user data entries

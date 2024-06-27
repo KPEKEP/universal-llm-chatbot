@@ -36,17 +36,34 @@ Universal LLM ChatBot is a versatile Telegram bot that leverages Large Language 
    cp config_template.yml config.yml
    ```
 
-4. Edit `config.yml` to include your Telegram Bot Token and other configurations.
+4. Set up the required environment variables (see Configuration section).
 
 ## Configuration
 
-The `config.yml` file contains all the necessary settings for the bot. Key configurations include:
+The bot uses a combination of environment variables and a `config.yml` file for configuration.
 
-- Telegram bot token
-- Admin user IDs
-- Access mode (public or whitelist)
+### Environment Variables
+
+Set the following environment variables:
+
+- `UNI_LLM_BOT_TOKEN`: Your Telegram Bot Token
+- `UNI_LLM_ADMIN_USER`: Comma-separated list of admin user IDs
+- `UNI_LLM_ACCESS_MODE`: Set to either "public" or "whitelist"
+
+Example:
+```bash
+export UNI_LLM_BOT_TOKEN=your_bot_token_here
+export UNI_LLM_ADMIN_USER=123456789,987654321
+export UNI_LLM_ACCESS_MODE=public
+```
+
+### Config File
+
+The `config.yml` file contains additional settings for the bot. Key configurations include:
+
 - AI provider settings
 - Rate limiting parameters
+- Database settings
 
 Refer to the comments in `config_template.yml` for detailed explanations of each setting.
 
@@ -104,7 +121,7 @@ The bot will now be active and respond to messages on Telegram.
    /getid @username
    ```
 
-Note: Admin commands are only available to users with administrative privileges as defined in the configuration file.
+Note: Admin commands are only available to users with administrative privileges as defined in the `UNI_LLM_ADMIN_USER` environment variable.
 
 ## Extending Beyond BasicProvider
 

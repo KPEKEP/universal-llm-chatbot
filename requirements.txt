@@ -10,3 +10,7 @@ cachetools
 aiolimiter
 pyyaml
 langdetect
+numpy
+scipy
+librosa
+soundfile

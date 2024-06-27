@@ -1,3 +1,4 @@
+import os
 import aiosqlite
 import json
 from datetime import datetime
@@ -17,6 +18,7 @@ class UserDataDB:
         """
         self.db = None
         self.db_name = db_name
+        os.makedirs(os.path.dirname(self.db_name), exist_ok=True)
         self.config = config
         self.provider_config = config["providers"][config["provider"]]
         self.cache = TTLCache(maxsize=config['user_data_db']['max_cache_size'],
