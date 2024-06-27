@@ -1,10 +1,11 @@
+import ollama
 from ollama import AsyncClient
 from bot.provider import Provider
 import whisper
 from TTS.api import TTS
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-
+import logging
 
 class BasicProvider(Provider):
     """Basic provider implementation using Ollama, Whisper, and TTS."""
@@ -17,6 +18,11 @@ class BasicProvider(Provider):
         :param config: Configuration dictionary
         """
         super().__init__(provider_name, config)
+        for model in self.provider_config['ollama']['models']:
+            logging.info(f"Pulling Ollama model: {model}")
+            ollama.pull(model)
+            logging.info(f"Successfully pulled Ollama model: {model}")
+
         self.client = AsyncClient(host=self.provider_config['ollama']['host'])
         self.whisper_model = whisper.load_model(
             self.provider_config["voice"]["whisper_model"]

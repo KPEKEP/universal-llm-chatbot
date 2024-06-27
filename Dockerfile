@@ -16,6 +16,9 @@ RUN apt-get update && apt-get install -y \
 # Clone the repository
 RUN git clone https://github.com/KPEKEP/universal-llm-chatbot.git .
 
+# Remove perinstalled whisper
+RUN pip uninstall -y whisper
+
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
