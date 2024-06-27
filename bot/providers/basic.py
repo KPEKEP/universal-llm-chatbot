@@ -18,7 +18,8 @@ class BasicProvider(Provider):
         :param config: Configuration dictionary
         """
         super().__init__(provider_name, config)
-        for model in self.provider_config['models']:
+        
+        for model in self.provider_config['models']['available']:
             logging.info(f"Pulling Ollama model: {model}")
             ollama.pull(model)
             logging.info(f"Successfully pulled Ollama model: {model}")
