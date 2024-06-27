@@ -1,7 +1,7 @@
 python-telegram-bot
 aiosqlite
 ollama
-whisper
+git+https://github.com/openai/whisper.git
 torch
 torchaudio
 TTS
