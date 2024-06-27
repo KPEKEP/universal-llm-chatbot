@@ -14,3 +14,4 @@ numpy
 scipy
 librosa
 soundfile
+python-telegram-bot[job-queue]
