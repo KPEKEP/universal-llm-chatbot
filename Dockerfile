@@ -11,6 +11,9 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Add a file to invalidate cache
+ADD https://github.com/KPEKEP/universal-llm-chatbot/commit/HEAD /tmp/commit_hash
+
 # Clone the repository
 RUN git clone https://github.com/KPEKEP/universal-llm-chatbot.git .
 
@@ -30,5 +33,6 @@ COPY ./ollama_setup.sh /app/
 RUN chmod +x /app/ollama_setup.sh
 RUN /app/ollama_setup.sh
 
+EXPOSE 21434
 # Entrypoint to run the bot
 CMD ["python", "main.py"]
