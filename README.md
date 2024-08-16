@@ -11,12 +11,14 @@ Universal LLM ChatBot is a versatile Telegram bot that leverages Large Language 
 - User-specific configurations
 - Rate limiting to prevent abuse
 - Admin commands for user management
+- Ollama, Groq, Gemini, OpenAI, and Anthropic support
 
 ## Prerequisites
 
-- Python 3.8+
+- Python 3.10+
 - Telegram Bot Token (obtain from BotFather)
 - Ollama server running locally or remotely
+- PyTorch development environment (see setup instructions below)
 
 ## Installation
 
@@ -38,6 +40,32 @@ Universal LLM ChatBot is a versatile Telegram bot that leverages Large Language 
 
 4. Set up the required environment variables (see Configuration section).
 
+## PyTorch Development Environment Setup
+
+To set up a PyTorch development environment using Conda, follow these steps:
+
+1. Install Anaconda or Miniconda if you haven't already.
+
+2. Create a new Conda environment:
+   ```
+   conda create -n pytorch-env python=3.10
+   ```
+
+3. Activate the environment:
+   ```
+   conda activate pytorch-env
+   ```
+
+4. Install PyTorch and related packages:
+   ```
+   conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+   ```
+
+5. Install other required packages:
+   ```
+   pip install -r requirements.txt
+   ```
+
 ## Configuration
 
 The bot uses a combination of environment variables and a `config.yml` file for configuration.
@@ -55,6 +83,11 @@ Example:
 export UNI_LLM_BOT_TOKEN=your_bot_token_here
 export UNI_LLM_ADMIN_USER=123456789,987654321
 export UNI_LLM_ACCESS_MODE=public
+export UNI_LLM_GROQ_API_KEY=your_groq_api_key_here
+export UNI_LLM_GEMINI_API_KEY=your_gemini_api_key_here
+export UNI_LLM_OPENAI_API_KEY=your_openai_api_key_here
+export UNI_LLM_ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
 ```
 
 ### Config File
@@ -69,13 +102,22 @@ Refer to the comments in `config_template.yml` for detailed explanations of each
 
 ## Usage
 
-To start the bot, run:
+To start the bot, you can use the provided `start.bat` file as an example. Here's a sample content of `start.bat`:
 
-```
-python main.py
+```batch
+SET UNI_LLM_BOT_TOKEN=your_telegram_bot_token_here
+SET UNI_LLM_ADMIN_USER_IDS=your_telegram_user_id_here
+SET UNI_LLM_ACCESS_MODE=public
+SET UNI_LLM_GROQ_API_KEY=your_groq_api_key_here
+SET UNI_LLM_GEMINI_API_KEY=your_gemini_api_key_here
+SET UNI_LLM_OPENAI_API_KEY=your_openai_api_key_here
+SET UNI_LLM_ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+@call conda activate pytorch-env
+@call python main.py
 ```
 
-The bot will now be active and respond to messages on Telegram.
+Modify the `start.bat` file with your specific environment variables and run it to start the bot.
 
 ## Available Commands
 
@@ -85,6 +127,8 @@ The bot will now be active and respond to messages on Telegram.
 - `/settings`: Access and modify bot settings.
 - `/reset`: Reset your conversation history.
 - `/history`: Export your conversation history.
+- `/language`: Change the bot's language.
+- `/speaker`: Change the bot's voice speaker.
 
 ### Admin Commands
 
@@ -150,6 +194,10 @@ class CustomProvider(Provider):
 
     async def text_to_speech(self, text, output_filename, language="en", speaker=None):
         # Implement your custom text-to-speech logic
+
+    async def get_models(self):
+        # Implement your custom available models list retrieval logic
+        pass        
 ```
 
 ## Ollama Setup
