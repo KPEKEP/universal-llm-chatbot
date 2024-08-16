@@ -1,0 +1,10 @@
+SET UNI_LLM_BOT_TOKEN=your_telegram_bot_token_here
+SET UNI_LLM_ADMIN_USER_IDS=your_telegram_user_id_here
+SET UNI_LLM_ACCESS_MODE=public
+SET UNI_LLM_GROQ_API_KEY=your_groq_api_key_here
+SET UNI_LLM_GEMINI_API_KEY=your_gemini_api_key_here
+SET UNI_LLM_OPENAI_API_KEY=your_openai_api_key_here
+SET UNI_LLM_ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+@call conda activate pytorch
+@call python main.py

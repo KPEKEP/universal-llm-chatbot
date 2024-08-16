@@ -14,3 +14,7 @@ numpy
 scipy
 librosa
 soundfile
+groq
+google-generativeai
+openai
+anthropic

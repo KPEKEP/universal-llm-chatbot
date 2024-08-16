@@ -50,6 +50,15 @@ class Provider(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    async def get_models(self):
+        """
+        Get the list of available models for the provider.
+
+        :return: List of available model names
+        """
+        pass
+
 
 def get_provider(config):
     """

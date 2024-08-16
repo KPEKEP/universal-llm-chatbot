@@ -11,7 +11,7 @@ telegram:
 
 user_data_db:
   # Name of the SQLite database file to store user data
-  name: "data/user_data.db" # For docker "app/data/user_data.db"
+  name: "app/data/user_data.db" # For docker "app/data/user_data.db"
   # Maximum number of user data entries to keep in memory cache
   max_cache_size: 1000
   # Time-to-live (in seconds) for cached user data entries
@@ -22,26 +22,39 @@ provider: basic.BasicProvider
 
 providers:
   basic.BasicProvider:
+    text_provider: "ollama"  # Options: "ollama", "groq", "gemini", "chatgpt", "claude"
     ollama:
       # URL of the Ollama server for AI model inference
       host: http://localhost:11434
-
+    groq:
+      # UNI_LLM_GROQ_API_KEY should contain api key
+      available_models:
+        - "llama3-70b-8192"
+        - "llama-3.1-70b-versatile"
+        - "llama-3.1-8b-instant"
+        - "llama3-8b-8192"
+        - "mixtral-8x7b-32768"
+        - "gemma2-9b-it"
+    gemini:
+      # UNI_LLM_GEMINI_API_KEY should contain api key
+      available_models: # list models that you have access to
+    openai:
+      # UNI_LLM_OPENAI_API_KEY should contain api key
+      available_models: # list models that you have access to
+    anthropic:
+      # UNI_LLM_ANTHROPIC_API_KEY should contain api key
+      available_models: # list models that you have access to
     models:
       # Default system prompt for the AI model
       system_prompt: 'You are a helpful, harmless, and honest AI assistant. Provide accurate info, respect safety, admit uncertainty, encourage critical thinking, and adapt to users. Avoid harm, be respectful, and prioritize well-being. Be concise yet thorough. Respond in the same language as the user.'
       # Controls randomness in AI responses (0.0 to 1.0)
-      temperature: 0.2
+      temperature: 0.5
       # Controls diversity of AI responses (0.0 to 1.0)
       top_p: 0.95
       # Maximum number of tokens in AI responses
       max_tokens: 2048
       # Default AI model to use
-      default: "aya:latest"
-      # List of available AI models
-      available:
-        - "llama3:8b"
-        - "aya:latest"
-        - "deepseek-coder-v2:16b-lite-instruct-q8_0"
+      default: "llama3-70b-8192"
     voice:
       # Whisper model size for voice transcription
       whisper_model: "medium"
@@ -55,10 +68,10 @@ providers:
       # Speed of the speaker's voice (1-10)
       speaker_speed: 5
       # Whether to split long text into sentences for TTS
-      split_sentences: true     
+      split_sentences: true
 
 # Whether to include the system prompt in each message to the AI
-remind_system_prompt: true
+remind_system_prompt: false
 
 rate_limit:
   # Maximum number of global requests allowed in the specified time frame

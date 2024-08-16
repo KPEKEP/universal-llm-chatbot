@@ -163,3 +163,4 @@ cython_debug/
 user_data.db
 data/user_data.db
 changes.patch
+start copy.bat

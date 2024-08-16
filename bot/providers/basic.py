@@ -1,14 +1,20 @@
+import os
 import ollama
 from ollama import AsyncClient
+import groq
+from google.generativeai import GenerativeModel
+import openai
+from anthropic import AsyncAnthropic
 from bot.provider import Provider
 import whisper
 from TTS.api import TTS
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import logging
+import google.generativeai as genai
 
 class BasicProvider(Provider):
-    """Basic provider implementation using Ollama, Whisper, and TTS."""
+    """Basic provider implementation using various text providers, Whisper, and TTS."""
 
     def __init__(self, provider_name, config):
         """
@@ -18,34 +24,103 @@ class BasicProvider(Provider):
         :param config: Configuration dictionary
         """
         super().__init__(provider_name, config)
-        for model in self.provider_config['models']:
+        self.text_provider = self.provider_config['text_provider']
+        
+        if self.text_provider == 'ollama':            
+            model = self.provider_config['models']['default']
             logging.info(f"Pulling Ollama model: {model}")
             ollama.pull(model)
             logging.info(f"Successfully pulled Ollama model: {model}")
-
-        self.client = AsyncClient(host=self.provider_config['ollama']['host'])
+            self.ollama_client = AsyncClient(host=self.provider_config['ollama']['host'])
+        elif self.text_provider == 'groq':
+            api_key = os.getenv('UNI_LLM_GROQ_API_KEY')
+            if not api_key:
+                raise ValueError("GROQ API key not found. Please set the UNI_LLM_GROQ_API_KEY environment variable.")
+            self.groq_client = groq.AsyncClient(api_key=api_key)
+        elif self.text_provider == 'gemini':
+            api_key = os.getenv('UNI_LLM_GEMINI_API_KEY')
+            if not api_key:
+                raise ValueError("Gemini API key not found. Please set the UNI_LLM_GEMINI_API_KEY environment variable.")
+            genai.configure(api_key=api_key)
+            self.gemini_client = GenerativeModel(self.provider_config['gemini']['model'])
+        elif self.text_provider == 'chatgpt':
+            api_key = os.getenv('UNI_LLM_OPENAI_API_KEY')
+            if not api_key:
+                raise ValueError("OpenAI API key not found. Please set the UNI_LLM_OPENAI_API_KEY environment variable.")
+            self.openai_client = openai.AsyncOpenAI(api_key=api_key)
+        elif self.text_provider == 'claude':
+            api_key = os.getenv('UNI_LLM_ANTHROPIC_API_KEY')
+            if not api_key:
+                raise ValueError("Anthropic API key not found. Please set the UNI_LLM_ANTHROPIC_API_KEY environment variable.")
+            self.claude_client = AsyncAnthropic(api_key=api_key)
+        else:
+            raise ValueError(f"Unsupported text provider: {self.text_provider}")
+        
         self.whisper_model = whisper.load_model(
             self.provider_config["voice"]["whisper_model"]
         )
         self.tts = TTS(self.provider_config["tts"]["model"], gpu=self.provider_config["tts"]["gpu"])
         self.speakers = list(self.tts.synthesizer.tts_model.speaker_manager.name_to_id)
 
+    async def get_models(self):
+        if self.text_provider == 'ollama':
+            models = await self.ollama_client.list()
+            return [model['name'] for model in models['models']]
+        elif self.text_provider == 'groq':
+            return self.provider_config["groq"]["available_models"]
+        elif self.text_provider == 'gemini':
+            return self.provider_config["gemini"]["available_models"]
+        elif self.text_provider == 'chatgpt':
+            models = await self.openai_client.models.list()
+            return [model.id for model in models.data if model.id.startswith('gpt')]
+        elif self.text_provider == 'claude':
+            return self.provider_config["claude"]["available_models"]
+        else:
+            raise ValueError(f"Unsupported text provider: {self.text_provider}")
+
     async def generate_response(self, model, messages, options):
         """
-        Generate a response using the Ollama client.
+        Generate a response using the selected text provider.
 
         :param model: The AI model to use
         :param messages: List of input messages
         :param options: Additional options for generation
         :return: Dictionary containing the generated response
         """
-        response = await self.client.chat(
-            model=model,
-            messages=messages,
-            stream=False,
-            options=options
-        )
-        return {'content': response['message']['content']}
+        if self.text_provider == 'ollama':
+            response = await self.ollama_client.chat(
+                model=model,
+                messages=messages,
+                stream=False,
+                options=options
+            )
+            return {'content': response['message']['content']}
+        elif self.text_provider == 'groq':
+            response = await self.groq_client.chat.completions.create(
+                model=model,
+                messages=messages,
+                **options
+            )
+            return {'content': response.choices[0].message.content}
+        elif self.text_provider == 'gemini':
+            response = await self.gemini_client.generate_content_async(messages[-1]['content'])
+            return {'content': response.text}
+        elif self.text_provider == 'chatgpt':
+            response = await self.openai_client.chat.completions.create(
+                model=model,
+                messages=messages,
+                **options
+            )
+            return {'content': response.choices[0].message.content}
+        elif self.text_provider == 'claude':
+            response = await self.claude_client.completions.create(
+                model=model,
+                prompt=messages[-1]['content'],
+                **options
+            )
+            return {'content': response.completion}
+        else:
+            raise ValueError(f"Unsupported text provider: {self.text_provider}")
 
     async def transcribe_voice(self, input_filename):
         """

@@ -320,7 +320,7 @@ class TelegramBot:
     async def show_model_options(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show available model options as buttons."""
         user_id = update.effective_user.id
-        available_models = self.provider.provider_config["models"]["available"]
+        available_models = await self.provider.get_models()
         
         keyboard = [
             [InlineKeyboardButton(model, callback_data=f"choose_model:{model}")]
@@ -339,7 +339,7 @@ class TelegramBot:
         user_id = update.effective_user.id
         user_data = await self.user_db.get_user_data(user_id)
 
-        if model in self.provider.provider_config["models"]["available"]:
+        if model in await self.provider.get_models():
             if model != user_data.model:
                 user_data.model = model
                 await self.user_db.update_user_data(user_data)
@@ -566,7 +566,7 @@ class TelegramBot:
     async def update_model(self, update: Update, user_data: UserData, value: str):
         """Update the user's preferred model."""
         user_id = update.effective_user.id
-        if value in self.provider.provider_config["models"]["available"]:
+        if value in await self.provider.get_models():
             if value != user_data.model:
                 user_data.model = value
                 await self.user_db.update_user_data(user_data)
